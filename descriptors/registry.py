@@ -53,6 +53,5 @@ class Registry(metaclass = RegistryMeta):
     __registry__ = weakref.WeakValueDictionary()
 
     def __set_name__(self, owner, name):
-        instances = Instances()
         self.__registry__.setdefault(owner.__name__, owner)
-        setattr(owner, name, instances)
+        setattr(owner, name, Instances())

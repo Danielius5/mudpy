@@ -1,4 +1,28 @@
-class State:
+# metaclass that includes __getitem__ to get a subclass by name stripping State from the end
+def search_subs(subs, name):
+    for sub in subs:
+        if sub.__name__ == name:
+            return sub
+        result = search_subs(sub.__subclasses__(), name)
+        if result is not None:
+            return result
+    return None
+
+class Meta(type):
+    def __getitem__(self, item):
+        if isinstance(item, type):
+            item = item.__name__
+        name = f"{item.lower().title()}State"
+        sub = search_subs(self.__subclasses__(), name)
+        if sub is None:
+            raise KeyError(f"Could not find subclass {name}")
+        return sub
+
+    
+        
+
+
+class State(metaclass = Meta):
     def __init__(self, *constraints, default = None, default_factory = None, _type = None):
         self.constraints = constraints
         self.default = default
@@ -54,7 +78,7 @@ class FloatState(NumberState):
 
 
 # noinspection PyArgumentList
-class StringState(State):
+class StrState(State):
     def __init__(self, min_length=None, max_length=None, *args, **kwargs):
         constraint = None
         match min_length, max_length:
@@ -73,3 +97,21 @@ class StringState(State):
 class BoolState(State):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, _type = bool, **kwargs)
+
+
+
+if __name__ == '__main__':
+    class Test:
+        name = StrState(1, 10, default = "test")
+        age = IntState(0, 100, default = 0)
+        height = FloatState(0, 3, default = 1.5)
+        alive = BoolState(default = True)
+        
+        def __init__(self, name, age, height, alive):
+            self.name = name
+            self.age = age
+            self.height = height
+            self.alive = alive
+            
+        def __repr__(self):
+            return f"Test(name = {self.name}, age = {self.age}, height = {self.height}, alive = {self.alive})"
