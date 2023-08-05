@@ -1,4 +1,6 @@
-from descriptors import Registry, State
+from descriptors.state import State
+from descriptors.registry import Registry
+
 
 class GameObject:
     registry = Registry()
