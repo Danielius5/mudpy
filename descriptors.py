@@ -1,12 +1,9 @@
 import weakref
-from typing import Generic, TypeVar
 
-T = TypeVar('T')
-
-
-class State(Generic[T]):
-    def __init__(self, default = None, _type = None):
+class State:
+    def __init__(self, default = None, default_factory=None, _type = None):
         self.default = default
+        self.default_factory = default_factory
         self.type = _type or type(default) if default is not None else None
 
     def __set_name__(self, owner, name):
@@ -15,7 +12,7 @@ class State(Generic[T]):
     def __get__(self, instance, owner):
         if instance is None:
             return self
-        return instance.__dict__.get(self.name, self.default)
+        return instance.__dict__.get(self.name, self.default_factory() if self.default_factory else self.default)
 
     def __set__(self, instance, value):
         if self.type is not None:
