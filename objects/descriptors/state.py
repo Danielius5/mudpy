@@ -37,19 +37,19 @@ class BaseState(metaclass = Meta):
     
     """
 
-    def __init__(self, *constraints, default = None, default_factory = None, _type = None, freeze = True):
+    def __init__(self, *constraints, default = None, default_factory = None, _type = None, freeze = True, post_process = None):
         
         if default is not None and default_factory is not None:
             raise ValueError("Cannot specify both default and default_factory")
         self.constraints = constraints
         self.default = default
         self.default_factory = default_factory
+        self.post_process = post_process
         self.type = _type or type(default) if default is not None else None
         self.freeze = freeze
         self.frozen = False
 
     def __set_name__(self, owner, name):
-        # returns self to allow for builder like pattern
         self.name = name
         return self
 
@@ -75,7 +75,7 @@ class BaseState(metaclass = Meta):
                     raise TypeError(f"Expected {self.type}, got {type(value)}")
             if not all(constraint(value) for constraint in self.constraints):
                 raise ValueError(f"Value {value} does not meet all constraints")
-        instance.__dict__[self.name] = value
+        instance.__dict__[self.name] = (self.post_process(value) if self.post_process is not None else value)
         self.frozen = self.freeze
 
     def __delete__(self, instance):
