@@ -1,4 +1,8 @@
-
+"""
+Bounded State descriptors for use in the State pattern.
+These are type checked and enforce constraints on the values they hold.
+This is useful for managing data from the users to make sure its clean and expected.
+"""
 def search_subs(subs, name):
     for sub in subs:
         if sub.__name__ == name:
@@ -10,6 +14,7 @@ def search_subs(subs, name):
 
 
 class Meta(type):
+    # metaclass that lets us use the class like a mapping to grab a particular state type, this helps the facade do its lookup and type inference
     def __getitem__(self, item):
         if item is None:
             return State
@@ -18,11 +23,15 @@ class Meta(type):
         name = f"{item.lower().title()}State"
         sub = search_subs(self.__subclasses__(), name)
         if sub is None:
-            raise KeyError(f"Unsupported type {item}")
+            return BaseState
         return sub
 
 
 class BaseState(metaclass = Meta):
+    """
+    Represents a constraint on a value.
+    
+    """
     def __init__(self, *constraints, default = None, default_factory = None, _type = None):
         self.constraints = constraints
         self.default = default
@@ -101,7 +110,10 @@ class BoolState(BaseState):
 
 
 class State:
-    """Facade for the State classes. Allows for type inference."""
+    """
+    Facade for the State classes. Allows for type inference.
+    Looks up the appropriate state type based on the type annotation of the attribute.
+    """
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs

@@ -1,3 +1,7 @@
+"""
+Descriptors for registering classes, and accessing their instances.
+This is useful for registering objects to systems and vice versa.
+"""
 import weakref
 
 
@@ -13,11 +17,11 @@ class Instances:
     __slots__ = ()
 
     def __get__(self, instance, owner):
-        return [
+        return weakref.WeakSet(
                 obj for
                 obj in globals().setdefault('gc', __import__('gc')).get_referrers(owner)
                 if isinstance(obj, owner)
-        ]
+        )
 
 
 class RegistryMeta(type):
