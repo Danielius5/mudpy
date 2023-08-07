@@ -1,6 +1,3 @@
-import typing, inspect
-
-TV = typing.TypeVar("TV")
 
 def search_subs(subs, name):
     for sub in subs:
@@ -103,9 +100,8 @@ class BoolState(BaseState):
         super().__init__(*args, _type = bool, **kwargs)
 
 
-class State(typing.Generic[TV]):
-    # infers the type of state from the type annotation
-    # replaces self with the state, passing the arguments
+class State:
+    """Facade for the State classes. Allows for type inference."""
     def __init__(self, *args, **kwargs):
         self.args = args
         self.kwargs = kwargs
