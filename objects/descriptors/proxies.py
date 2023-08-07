@@ -1,5 +1,10 @@
-import gc
 import weakref
+
+def get_wrap(func, *args, **kwargs):
+    def wrapper(self, instance):
+        return self.factory(instance, *args, **kwargs)
+    return wrapper
+
 
 class WeakProxy:
     def __set__(self, instance, value):
@@ -27,7 +32,27 @@ class WeakWrapper:
         self.args = args
         self.kwargs = kwargs
         self.default = __default
-
+        
+    def __set_name__(self, owner, name):
+        self.name = name
+        
+    def replace_factory(self, factory):
+        self.factory = weakref.proxy(factory)
+        
+    def replace_args(self, *args):
+        self.args = args
+        
+    def replace_kwargs(self, **kwargs):
+        self.kwargs = kwargs
+        
+    def replace_default(self, default):
+        self.default = default
+        
+    def extend_args(self, *args):
+        self.args += args
+        
+    def extend_kwargs(self, **kwargs):
+        self.kwargs.update(kwargs)
 
 # noinspection PyArgumentList
 class Factory(WeakWrapper):
@@ -38,9 +63,6 @@ class Factory(WeakWrapper):
             return instance.__dict__.setdefault(self.name, self.factory(*self.args, **self.kwargs))
         except ReferenceError:
             return self.default
-
-    def __set_name__(self, owner, name):
-        self.name = name
 
 
 # noinspection PyArgumentList
@@ -54,3 +76,4 @@ class Dynamic(WeakWrapper):
             return self.default
 
 
+__all__ = ["WeakProxy", "Factory", "Dynamic"]

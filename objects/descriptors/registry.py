@@ -55,3 +55,6 @@ class Registry(metaclass = RegistryMeta):
     def __set_name__(self, owner, name):
         self.__registry__.setdefault(owner.__name__, owner)
         setattr(owner, name, Instances())
+
+
+__all__ = ['Registry', 'Instances']

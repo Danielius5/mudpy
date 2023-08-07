@@ -1,5 +1,5 @@
-from .descriptors import State
-from .descriptors import Registry
+from .descriptors import *
+from .descriptors import __all__ as _all_descriptors
 
 class GameObject:
     registry = Registry()
@@ -9,7 +9,7 @@ class GameObject:
             raise TypeError("Cannot instantiate Base class")
         
         for name, value in cls.__annotations__.items(): # noqa
-            if issubclass(value, State):
+            if issubclass(value, BaseState):
                 if isinstance((var:=cls.__dict__[name]), dict):
                     state = value(**var)
                 elif callable(cls.__dict__[name]):
@@ -22,5 +22,6 @@ class GameObject:
         return super().__new__(cls)
     
     
+__all__ = _all_descriptors + ["GameObject"]
 
     

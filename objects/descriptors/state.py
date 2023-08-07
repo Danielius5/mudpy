@@ -1,3 +1,7 @@
+import typing, inspect
+
+TV = typing.TypeVar("TV")
+
 def search_subs(subs, name):
     for sub in subs:
         if sub.__name__ == name:
@@ -10,6 +14,8 @@ def search_subs(subs, name):
 
 class Meta(type):
     def __getitem__(self, item):
+        if item is None:
+            return State
         if isinstance(item, type):
             item = item.__name__
         name = f"{item.lower().title()}State"
@@ -19,7 +25,7 @@ class Meta(type):
         return sub
 
 
-class State(metaclass = Meta):
+class BaseState(metaclass = Meta):
     def __init__(self, *constraints, default = None, default_factory = None, _type = None):
         self.constraints = constraints
         self.default = default
@@ -28,6 +34,7 @@ class State(metaclass = Meta):
 
     def __set_name__(self, owner, name):
         self.name = name
+        return self
 
     def __get__(self, instance, owner):
         if instance is None:
@@ -47,7 +54,7 @@ class State(metaclass = Meta):
 
 
 # noinspection PyArgumentList
-class NumberState(State):
+class NumberState(BaseState):
     def __init__(self, minimum = None, maximum = None, *args, **kwargs):
         constraint = None
         match minimum, maximum:
@@ -75,7 +82,7 @@ class FloatState(NumberState):
 
 
 # noinspection PyArgumentList
-class StrState(State):
+class StrState(BaseState):
     def __init__(self, min_length = None, max_length = None, *args, **kwargs):
         constraint = None
         match min_length, max_length:
@@ -91,23 +98,31 @@ class StrState(State):
 
 
 # noinspection PyArgumentList
-class BoolState(State):
+class BoolState(BaseState):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, _type = bool, **kwargs)
 
 
-if __name__ == '__main__':
-    class Test:
-        name = StrState(1, 10, default = "test")
-        age = IntState(0, 100, default = 0)
-        height = FloatState(0, 3, default = 1.5)
-        alive = BoolState(default = True)
+class State(typing.Generic[TV]):
+    # infers the type of state from the type annotation
+    # replaces self with the state, passing the arguments
+    def __init__(self, *args, **kwargs):
+        self.args = args
+        self.kwargs = kwargs
 
-        def __init__(self, name, age, height, alive):
-            self.name = name
-            self.age = age
-            self.height = height
-            self.alive = alive
+    def __set_name__(self, owner, name):
+        t = owner.__annotations__.get(name, None)
+        setattr(
+                owner, 
+                name,
+                BaseState[
+                    t
+                ](
+                        *self.args,
+                        **self.kwargs).__set_name__(
+                        owner, 
+                        name)
+        )
 
-        def __repr__(self):
-            return f"Test(name = {self.name}, age = {self.age}, height = {self.height}, alive = {self.alive})"
+
+__all__ = ["BaseState", "NumberState", "IntState", "FloatState", "StrState", "BoolState", "State"]
