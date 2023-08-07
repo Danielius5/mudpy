@@ -17,11 +17,10 @@ class Instances:
     __slots__ = ()
 
     def __get__(self, instance, owner):
-        return weakref.WeakSet(
-                obj for
-                obj in globals().setdefault('gc', __import__('gc')).get_referrers(owner)
-                if isinstance(obj, owner)
-        )
+        """We grab weak references to instances of the class from the garbage collector.
+            We do this because it already holds references to all objects, and we don't
+        """
+        return weakref.WeakSet(filter(lambda obj: isinstance(obj, owner), globals().setdefault('gc', __import__('gc')).get_referrers(owner)))
 
 
 class RegistryMeta(type):
@@ -57,6 +56,7 @@ class Registry(metaclass = RegistryMeta):
     __registry__ = weakref.WeakValueDictionary()
 
     def __set_name__(self, owner, name):
+        """Here we register the class with the registry, and then replace self with an Instances descriptor."""
         self.__registry__.setdefault(owner.__name__, owner)
         setattr(owner, name, Instances())
 

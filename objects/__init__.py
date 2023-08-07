@@ -1,26 +1,21 @@
+from itertools import count
+
 from .descriptors import *
 from .descriptors import __all__ as _all_descriptors
 
+import uuid
+
+# noinspection PyTypeChecker
 class GameObject:
+        
     registry = Registry()
+    uuid = State(default_factory = lambda: uuid.uuid4().hex, freeze = True)
     
-    def __new__(cls, *args, **kwargs):
-        if cls is GameObject:
-            raise TypeError("Cannot instantiate Base class")
-        
-        for name, value in cls.__annotations__.items(): # noqa
-            if issubclass(value, BaseState):
-                if isinstance((var:=cls.__dict__[name]), dict):
-                    state = value(**var)
-                elif callable(cls.__dict__[name]):
-                    state = value(default_factory = cls.__dict__[name])
-                else:
-                    state = value(default = cls.__dict__[name])
-                state.__set_name__(cls, name)
-                setattr(cls, name, state)
-        
-        return super().__new__(cls)
-    
+    def __init_subclass__(cls, freeze = False, **kwargs):
+        super().__init_subclass__(**kwargs)
+        for name, value in cls.__dict__.items():
+            if isinstance(value, BaseState):
+                value.freeze = freeze
     
 __all__ = _all_descriptors + ["GameObject"]
 
