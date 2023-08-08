@@ -20,7 +20,7 @@ class Instances:
         """We grab weak references to instances of the class from the garbage collector.
             We do this because it already holds references to all objects, and we don't
         """
-        return weakref.WeakSet(filter(lambda obj: isinstance(obj, owner), globals().setdefault('gc', __import__('gc')).get_referrers(owner)))
+        return list(filter(lambda obj: isinstance(obj, owner), globals().setdefault('gc', __import__('gc')).get_referrers(owner)))
 
 
 class RegistryMeta(type):
@@ -31,13 +31,19 @@ class RegistryMeta(type):
     __slots__ = ()
 
     def __getitem__(cls, item):
-        return getattr(cls, '__registry__')[item]
+        return getattr(cls, '__registry__')[cls.cls_to_name(item)]
 
     def __setitem__(cls, item, value):
-        getattr(cls, '__registry__')[item] = value
+        getattr(cls, '__registry__')[cls.cls_to_name(item)] = value
 
     def __delitem__(cls, item):
-        del getattr(cls, '__registry__')[item]
+        del getattr(cls, '__registry__')[cls.cls_to_name(item)]
+
+    def __contains__(cls, item):
+        return cls.cls_to_name(item) in getattr(cls, '__registry__')
+
+    def cls_to_name(self, item):
+        return item.__name__ if isinstance(item, type) else item
 
     def __iter__(cls):
         return iter(getattr(cls, '__registry__').items())
@@ -45,12 +51,11 @@ class RegistryMeta(type):
     def __len__(cls):
         return len(getattr(cls, '__registry__'))
 
-    def __contains__(cls, item):
-        return item in getattr(cls, '__registry__')
-
-
 class Registry(metaclass = RegistryMeta):
-    """Registers the class with the registry. And then replaces self with an Instances descriptor."""
+    """
+    Registers the class with the registry. And then replaces self with an Instances descriptor.
+    This means we only need to import this class to access all of the registered classes, and their instances.
+    """
 
     __slots__ = ()
     __registry__ = weakref.WeakValueDictionary()
@@ -59,6 +64,42 @@ class Registry(metaclass = RegistryMeta):
         """Here we register the class with the registry, and then replace self with an Instances descriptor."""
         self.__registry__.setdefault(owner.__name__, owner)
         setattr(owner, name, Instances())
-
+        
+    @classmethod
+    def get(cls, name):
+        """Returns the class from the registry."""
+        return cls.__registry__[name]
+    
+    @classmethod
+    def get_instances(cls, name):
+        """Returns the value of the Instances descriptor from the class."""
+        clz = cls.get(name)
+        for k, v in clz.__dict__.items():
+            if isinstance(v, Instances):
+                return v.__get__(None, clz)
+        raise ValueError(f"Could not find Instances descriptor for {name}")
 
 __all__ = ['Registry', 'Instances']
+
+
+if __name__ == '__main__':
+    
+    # noinspection PyTypeChecker
+    class DataContainer:
+        registry = Registry()
+        
+        def __init__(self, **kwargs):
+            self.__data_keys__ = kwargs.keys()
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+                
+        def __repr__(self):
+            return f"{self.__class__.__name__}({', '.join(f'{k}={getattr(self, k)!r}' for k in self.__data_keys__)})"
+        
+        
+    a = DataContainer(a = 1, b = 2, c = 3)
+    b = DataContainer(a = 4, b = 5, c = 6)
+    c = DataContainer(a = 7, b = 8, c = 9)
+    d = DataContainer(a = 10, b = 11, c = 12)
+    
+    print(DataContainer.registry)

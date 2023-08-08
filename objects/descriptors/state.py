@@ -5,6 +5,7 @@ This is useful for managing data from the users to make sure its clean and expec
 """
 
 import os
+import typing
 
 
 def search_subs(subs, name):
@@ -37,7 +38,7 @@ class BaseState(metaclass = Meta):
     
     """
 
-    def __init__(self, *constraints, default = None, default_factory = None, _type = None, freeze = True, post_process = None):
+    def __init__(self, *constraints, default = None, default_factory = None, _type = None, freeze = False, post_process = None):
         
         if default is not None and default_factory is not None:
             raise ValueError("Cannot specify both default and default_factory")
@@ -67,14 +68,16 @@ class BaseState(metaclass = Meta):
         )
 
     def __set__(self, instance, value):
+        if instance is None:
+            raise AttributeError("Cannot set state on class")
         if self.frozen:
             raise AttributeError("Cannot set frozen state")
         if not self.skip_checking:
             if self.type is not None:
                 if not isinstance(value, self.type):
-                    raise TypeError(f"Expected {self.type}, got {type(value)}")
+                    raise TypeError(f"Expected {self.type}, got {type(value)} for {self.name}")
             if not all(constraint(value) for constraint in self.constraints):
-                raise ValueError(f"Value {value} does not meet all constraints")
+                raise ValueError(f"Value {value} does not meet all constraints for {self.name}")
         instance.__dict__[self.name] = (self.post_process(value) if self.post_process is not None else value)
         self.frozen = self.freeze
 
@@ -139,6 +142,33 @@ class BoolState(BaseState):
         super().__init__(*args, _type = bool, **kwargs)
 
 
+# noinspection PyArgumentList, PyTypeChecker
+class DictState(BaseState):
+    def __init__(self, *args, expected = None, **kwargs):
+        self.expected = expected or {}
+        def check_value(value):
+            if not isinstance(value, dict):
+                return False
+            for k, v in value.items():
+                if k not in self.expected:
+                    return False
+                expected_value = self.expected[k]
+                if isinstance(expected_value, typing._UnionGenericAlias) and type(None) in expected_value.__args__: 
+                    if v is None:
+                        continue
+                    for t in expected_value.__args__:
+                        if t is type(None):
+                            continue
+                        if isinstance(v, t):
+                            break
+                    else:
+                        return False
+                elif not isinstance(v, expected_value):
+                    return False
+            return True
+        super().__init__(check_value, *args, **kwargs)
+        
+
 # noinspection PyArgumentList
 class State:
     """
@@ -167,4 +197,14 @@ class State:
         )
 
 
-__all__ = ["BaseState", "NumberState", "IntState", "FloatState", "StrState", "BoolState", "State"]
+__all__ = ["BaseState", "NumberState", "IntState", "FloatState", "StrState", "BoolState", "DictState", "State"]
+
+
+if __name__ == "__main__":
+    class Test:
+        a: dict = State(expected = {"a": int, "b": str})
+        
+    t = Test()
+    t.a = {"a": 1, "b": "2"}
+    print(t.a)
+    t.a = {"a": 1, "b": 2}
