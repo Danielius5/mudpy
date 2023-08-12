@@ -1,6 +1,6 @@
 """
 Descriptors for registering classes, and accessing their instances.
-This is useful for registering objects to systems and vice versa.
+This is useful for registering engine to systems and vice versa.
 """
 import weakref
 
@@ -18,7 +18,7 @@ class Instances:
 
     def __get__(self, instance, owner):
         """We grab weak references to instances of the class from the garbage collector.
-            We do this because it already holds references to all objects, and we don't
+            We do this because it already holds references to all engine, and we don't
         """
         return tuple(filter(lambda obj: isinstance(obj, owner), globals().setdefault('gc', __import__('gc')).get_referrers(owner)))
 
@@ -46,7 +46,7 @@ class RegistryMeta(type):
         return item.__name__ if isinstance(item, type) else item
 
     def __iter__(cls):
-        return iter(getattr(cls, '__registry__').items())
+        return iter(getattr(cls, '__registry__').data())
 
     def __len__(cls):
         return len(getattr(cls, '__registry__'))
@@ -75,7 +75,7 @@ class Registry(metaclass = RegistryMeta):
     def get_instances(cls, name):
         """Returns the value of the Instances descriptor from the class."""
         clz = cls.get(name)
-        for k, v in clz.__dict__.items():
+        for k, v in clz.__dict__.data():
             if isinstance(v, Instances):
                 return v.__get__(None, clz)
         raise ValueError(f"Could not find Instances descriptor for {name}")

@@ -1,5 +1,4 @@
-import json
-from objects import *
-from objects.mechanics import dice
-
-print(dice.d10())
+from engine import * 
+if __name__ == '__main__':
+    player = Player(name="Player")
+    print(player)

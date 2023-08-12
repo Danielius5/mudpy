@@ -6,7 +6,7 @@ def __getattr__(name):
         ]:
         if hasattr(globals()[_globals], '__all__'):
             if name in globals()[_globals].__all__:
-                return globals()[_globals].__dict__[name]
+                return getattr(globals()[_globals], name)
         elif hasattr(globals()[_globals], '__getattr__'):
             try:
                 return getattr(globals()[_globals], name)
@@ -14,5 +14,4 @@ def __getattr__(name):
                 pass
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-
-    
+__all__ = ['dice']

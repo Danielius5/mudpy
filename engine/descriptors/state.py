@@ -6,21 +6,24 @@ This is useful for managing data from the users to make sure its clean and expec
 
 import os
 import typing
+import weakref
 
 from ..utils import search_subs
 
 
 class Meta(type):
-    # metaclass that lets us use the class like a mapping to grab a particular state type, this helps the facade do its lookup and type inference
     def __getitem__(self, item):
         if item is not None:
             if isinstance(item, type):
                 item = item.__name__
-            name = f"{item.lower().title()}State"
-            sub = search_subs(self.__subclasses__(), name)
-            if sub is None:
-                return type(name, (BaseState,), {})
-            return sub
+            try:
+                name = f"{item.lower().title()}State"
+                sub = search_subs(self.__subclasses__(), name)
+                if sub is None:
+                    return type(name, (BaseState,), {})
+                return sub
+            except AttributeError:
+                pass
         return type("GenericState", (BaseState,), {})
 
 
@@ -30,7 +33,7 @@ class BaseState(metaclass = Meta):
     
     """
 
-    def __init__(self, *constraints, default = None, default_factory = None, _type = None, freeze = False, post_process = None):
+    def __init__(self, *constraints, default = None, default_factory = None, _type = None, freeze = False, post_process = None, weak=False, **misc_data):
         
         if default is not None and default_factory is not None:
             raise ValueError("Cannot specify both default and default_factory")
@@ -41,6 +44,8 @@ class BaseState(metaclass = Meta):
         self.type = _type or type(default) if default is not None else None
         self.freeze = freeze
         self.frozen = False
+        self.weak = weak
+        self.misc_data = misc_data
 
     def __set_name__(self, owner, name):
         self.name = name
@@ -52,12 +57,13 @@ class BaseState(metaclass = Meta):
         """
         if instance is None:
             return self
-        return instance.__dict__.setdefault(
-                self.name,
-                self.default_factory() 
-                if self.default_factory is not None 
-                else self.default
-        )
+        v = instance.__dict__.get(self.name, None)
+        if v is None:
+            v = (self.default_factory() if self.default_factory is not None else self.default)
+            if self.weak:
+                v = weakref.proxy(v, lambda ref: instance.__dict__.__delitem__(self.name))
+            instance.__dict__[self.name] = v
+        return v
 
     def __set__(self, instance, value):
         if instance is None:
@@ -70,7 +76,10 @@ class BaseState(metaclass = Meta):
                     raise TypeError(f"Expected {self.type}, got {type(value)} for {self.name}")
             if not all(constraint(value) for constraint in self.constraints):
                 raise ValueError(f"Value {value} does not meet all constraints for {self.name}")
-        instance.__dict__[self.name] = (self.post_process(value) if self.post_process is not None else value)
+        v = (self.post_process(value) if self.post_process is not None else value)
+        if self.weak:
+            v = weakref.proxy(v, lambda ref: instance.__dict__.__delitem__(self.name))
+        instance.__dict__[self.name] = v
         self.frozen = self.freeze
 
     def __delete__(self, instance):
