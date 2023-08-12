@@ -92,7 +92,6 @@ class BaseState(metaclass = Meta):
         super().__init_subclass__(**kwargs)
         cls.skip_checking = skip_checking
 
-
 # noinspection PyArgumentList
 class NumberState(BaseState):
     def __init__(self, *args, minimum = None, maximum = None, **kwargs):
