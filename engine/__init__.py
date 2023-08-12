@@ -2,4 +2,4 @@ from .descriptors import *
 from .bases import *
 from .mechanics import *
 
-__all__ = ['dice', 'GameObject', 'Player', 'State']
+__all__ = bases.__all__ + mechanics.__all__

@@ -1,6 +1,4 @@
-import typing
 import uuid
-import json
 from ..descriptors import *
 
 
@@ -30,7 +28,6 @@ class GameObject:
                     if k in data:
                         setattr(self, k, data[k])
 
-                            
             cls.__init__ = __init__
 
     def __init__(self, *args, **kwargs):
