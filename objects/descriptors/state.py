@@ -7,15 +7,7 @@ This is useful for managing data from the users to make sure its clean and expec
 import os
 import typing
 
-
-def search_subs(subs, name):
-    for sub in subs:
-        if sub.__name__ == name:
-            return sub
-        result = search_subs(sub.__subclasses__(), name)
-        if result is not None:
-            return result
-    return None
+from ..utils import search_subs
 
 
 class Meta(type):
@@ -198,13 +190,3 @@ class State:
 
 
 __all__ = ["BaseState", "NumberState", "IntState", "FloatState", "StrState", "BoolState", "DictState", "State"]
-
-
-if __name__ == "__main__":
-    class Test:
-        a: dict = State(expected = {"a": int, "b": str})
-        
-    t = Test()
-    t.a = {"a": 1, "b": "2"}
-    print(t.a)
-    t.a = {"a": 1, "b": 2}

@@ -20,7 +20,7 @@ class Instances:
         """We grab weak references to instances of the class from the garbage collector.
             We do this because it already holds references to all objects, and we don't
         """
-        return list(filter(lambda obj: isinstance(obj, owner), globals().setdefault('gc', __import__('gc')).get_referrers(owner)))
+        return tuple(filter(lambda obj: isinstance(obj, owner), globals().setdefault('gc', __import__('gc')).get_referrers(owner)))
 
 
 class RegistryMeta(type):
@@ -51,6 +51,7 @@ class RegistryMeta(type):
     def __len__(cls):
         return len(getattr(cls, '__registry__'))
 
+
 class Registry(metaclass = RegistryMeta):
     """
     Registers the class with the registry. And then replaces self with an Instances descriptor.
@@ -80,26 +81,3 @@ class Registry(metaclass = RegistryMeta):
         raise ValueError(f"Could not find Instances descriptor for {name}")
 
 __all__ = ['Registry', 'Instances']
-
-
-if __name__ == '__main__':
-    
-    # noinspection PyTypeChecker
-    class DataContainer:
-        registry = Registry()
-        
-        def __init__(self, **kwargs):
-            self.__data_keys__ = kwargs.keys()
-            for k, v in kwargs.items():
-                setattr(self, k, v)
-                
-        def __repr__(self):
-            return f"{self.__class__.__name__}({', '.join(f'{k}={getattr(self, k)!r}' for k in self.__data_keys__)})"
-        
-        
-    a = DataContainer(a = 1, b = 2, c = 3)
-    b = DataContainer(a = 4, b = 5, c = 6)
-    c = DataContainer(a = 7, b = 8, c = 9)
-    d = DataContainer(a = 10, b = 11, c = 12)
-    
-    print(DataContainer.registry)
