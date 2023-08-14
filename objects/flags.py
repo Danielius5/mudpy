@@ -55,9 +55,11 @@ class DamageType(GameFlags):
     RADIATION = auto()
     SONIC = auto()
 
+
 class AmmoType(GameFlags):
     NO_AMMO_TYPE = auto()
     BULLET = auto()
+
 
 class Targets(GameFlags):
     NO_TARGET = auto()

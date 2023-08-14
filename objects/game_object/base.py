@@ -4,9 +4,9 @@ import io
 import json
 import uuid
 from abc import ABC
-from dataclasses import dataclass, field, fields
+from dataclasses import dataclass, field
 
-from objects.flags import AmmoType, DamageType, Effect, InspectionDetails, ItemSlot, ObjectAction
+from objects.flags import Effect, InspectionDetails, ItemSlot, ObjectAction
 
 
 @dataclass
@@ -143,7 +143,7 @@ class Item(GameObject):
         self.stack_size += other.stack_size
         del other
         return self
-    
+
 
 @dataclass
 class Currency(Item):
@@ -187,102 +187,8 @@ class Currency(Item):
         return self
 
 
-@dataclass
-class Consumable(Item):
-    perishable: bool = False
-    decay_rate: float = 0.0
-    decay_time: float = 0.0
-
-
-@dataclass
-class Pharmaceutical(Consumable):
-    pass
-
-
-@dataclass
-class Food(Consumable):
-    pass
-
-
-@dataclass
-class Drink(Consumable):
-    pass
-
-
-@dataclass
-class Ammo(Consumable):
-    ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE
-
-
-@dataclass
-class Weapon(Item):
-    damage: int = 0
-    damage_type: DamageType = DamageType.NO_DAMAGE_TYPE
-    max_stack_size: int = 1
-
-    def detailed_description(self):
-        with contextlib.redirect_stdout(io.StringIO()) as f:
-            print(super().detailed_description().strip())
-            print(f"Damage: {self.damage}")
-            print(f"Damage Type: {self.damage_type}")
-            return f.getvalue()
-
-
-@dataclass
-class MeleeWeapon(Weapon):
-    slot: ItemSlot = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND
-
-
-@dataclass
-class RangedWeapon(Weapon):
-    slot: ItemSlot = ItemSlot.RANGED
-    ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE
-
-
-@dataclass
-class Armor(Item):
-    defense: int = 0
-    defense_type: DamageType = DamageType.NO_DAMAGE_TYPE
-    max_stack_size: int = 1
-
-    def detailed_description(self):
-        with contextlib.redirect_stdout(io.StringIO()) as f:
-            print(super().detailed_description().strip())
-            print(f"Defense: {self.defense}")
-            print(f"Defense Type: {self.defense_type}")
-            return f.getvalue()
-
-
-@dataclass
-class HeadArmor(Armor):
-    slot: ItemSlot = ItemSlot.HEAD
-
-
-@dataclass
-class ChestArmor(Armor):
-    slot: ItemSlot = ItemSlot.CHEST
-
-
-@dataclass
-class LegsArmor(Armor):
-    slot: ItemSlot = ItemSlot.LEGS
-
-
-@dataclass
-class FeetArmor(Armor):
-    slot: ItemSlot = ItemSlot.FEET
-
-
-@dataclass
-class WeaponMod(Item):
-    pass
-
-
-if __name__ == "__main__":
-    currency = Currency()
-    currency.stack_size = 1000
-    print(currency.perform_action(ObjectAction.DROP))
-    serialized = currency.to_json()
-    print(serialized)
-    deserialized = Currency.from_json(serialized)
-    print(deserialized.perform_action(ObjectAction.TRADE))
+__all__ = [
+    "GameObject",
+    "Item",
+    "Currency",
+]
