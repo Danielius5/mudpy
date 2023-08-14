@@ -9,7 +9,7 @@ import uuid
 from abc import ABC
 from dataclasses import dataclass, field, fields
 
-from objects.flags import Effect, InspectionDetails, ItemSlot, ObjectAction
+from objects.flags import Effect, InspectionDetails, ItemSlot, ObjectAction, WorldSpaceFlavor, WorldSpaceType
 
 default_dataclass_options = dict(
         slots = True,
@@ -296,6 +296,34 @@ class WorldSpace(GameObject):
     creatures: list[Living] = field(default_factory = list)
     items: list[Item] = field(default_factory = list)
     world_objects: list[WorldObject] = field(default_factory = list)
+    world_space_type: WorldSpaceType = field(
+            default = WorldSpaceType.ROOM,
+            metadata = {"convert_flag_type": WorldSpaceType}
+    )
+    world_space_flavor: WorldSpaceFlavor = field(
+            default = WorldSpaceFlavor.NO_FLAVOR,
+            metadata = {"convert_flag_type": WorldSpaceFlavor}
+    )
+    allowed_actions: ObjectAction = field(
+            default = ObjectAction.INSPECT,
+            metadata = {"convert_flag_type": ObjectAction}
+    )
+
+    def short_description(self):
+        return f"A {self.world_space_type.name.lower()}"
+
+    def long_description(self):
+        if self.world_space_flavor == WorldSpaceFlavor.NO_FLAVOR:
+            return self.short_description()
+        return f"A {', '.join([flavor.name.lower() for flavor in WorldSpaceFlavor.get_flags(self.world_space_flavor)])} {self.world_space_type.name.lower()}"
+
+    def detailed_description(self):
+        with contextlib.redirect_stdout(io.StringIO()) as f:
+            print(self.short_description())
+            print(f"Creatures: {', '.join([creature.name for creature in self.creatures])}")
+            print(f"Items: {', '.join([item.name for item in self.items])}")
+            print(f"Objects: {', '.join([obj.name for obj in self.world_objects])}")
+            return f.getvalue()
 
 
 __all__ = [

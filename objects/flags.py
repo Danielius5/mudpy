@@ -115,6 +115,47 @@ class Affliction(GameFlags):
     NO_AFFLICTION = auto()
 
 
+class WorldSpaceType(GameFlags):
+    ROOM = auto()
+    HALLWAY = auto()
+    STAIRS = auto()
+    STREET = auto()
+    ALLEY = auto()
+    BUILDING = auto()
+    PARK = auto()
+    FOREST = auto()
+    MOUNTAIN = auto()
+    WATER = auto()
+    UNDERGROUND = auto()
+
+
+class WorldSpaceFlavor(GameFlags):
+    NO_FLAVOR = auto()
+    DARK = auto()
+    LIGHT = auto()
+    COLD = auto()
+    HOT = auto()
+    WET = auto()
+    DRY = auto()
+    WINDY = auto()
+    CALM = auto()
+    QUIET = auto()
+    NOISY = auto()
+    SMELLY = auto()
+    FRESH = auto()
+    DENSE = auto()
+    OPEN = auto()
+    CROWDED = auto()
+    DANGEROUS = auto()
+    SAFE = auto()
+    CLEAN = auto()
+    DIRTY = auto()
+    FAMILIAR = auto()
+    UNFAMILIAR = auto()
+    COMFORTABLE = auto()
+    UNCOMFORTABLE = auto()
+
+
 __all__ = [
         "GameFlags",
         "Effect",
