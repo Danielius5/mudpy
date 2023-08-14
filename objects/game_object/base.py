@@ -196,7 +196,6 @@ class Item(GameObject):
         del other
         return self
 
-    # post init sets name infix if not set to a titled version of the class name
     def __post_init__(self):
         if not self.name_infix:
             self.name_infix = self.__class__.__name__.title()
@@ -255,8 +254,10 @@ class Living(GameObject):
     max_energy: int = field(default = 100)
     energy: int = field(default = 100)
 
-    allowed_actions: ObjectAction = field(default = ObjectAction.INSPECT,
-                                          metadata = {"convert_flag_type": ObjectAction})
+    allowed_actions: ObjectAction = field(
+            default = ObjectAction.INSPECT,
+            metadata = {"convert_flag_type": ObjectAction}
+    )
 
     def short_description(self):
         return self.name_infix
