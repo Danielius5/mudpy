@@ -9,6 +9,9 @@ class GameFlags(IntFlag):
     def __str__(self):
         return self.name.replace("_", " ").title()
 
+    def __contains__(self, item):
+        return item in self.get_flags(self)
+
 
 class Effect(GameFlags):
     NO_EFFECT = auto()
@@ -105,3 +108,22 @@ class InspectionDetails(GameFlags):
     LONG_INSPECT = auto()
     DETAILED_INSPECT = auto()
     ACTION_INSPECT = auto()
+    SELF_INSPECT = auto()
+
+
+class Affliction(GameFlags):
+    NO_AFFLICTION = auto()
+
+
+__all__ = [
+        "GameFlags",
+        "Effect",
+        "ItemSlot",
+        "DamageType",
+        "AmmoType",
+        "Targets",
+        "WeaponModSlot",
+        "ObjectAction",
+        "InspectionDetails",
+        "Affliction",
+]

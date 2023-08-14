@@ -3,10 +3,10 @@ import io
 from dataclasses import dataclass
 
 from objects.flags import AmmoType, DamageType, ItemSlot
-from objects.game_object.base import Item
+from objects.game_object.base import default_dataclass_options, Item
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class Weapon(Item):
     damage: int = 0
     damage_type: DamageType = DamageType.NO_DAMAGE_TYPE
@@ -20,12 +20,12 @@ class Weapon(Item):
             return f.getvalue()
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class MeleeWeapon(Weapon):
     slot: ItemSlot = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class RangedWeapon(Weapon):
     slot: ItemSlot = ItemSlot.RANGED
     ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE

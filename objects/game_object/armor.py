@@ -3,10 +3,10 @@ import io
 from dataclasses import dataclass
 
 from objects.flags import DamageType, ItemSlot
-from objects.game_object.base import Item
+from objects.game_object.base import default_dataclass_options, Item
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class Armor(Item):
     defense: int = 0
     defense_type: DamageType = DamageType.NO_DAMAGE_TYPE
@@ -20,24 +20,24 @@ class Armor(Item):
             return f.getvalue()
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class HeadArmor(Armor):
-    slot: ItemSlot = ItemSlot.HEAD
+    slots: ItemSlot = ItemSlot.HEAD
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class ChestArmor(Armor):
-    slot: ItemSlot = ItemSlot.CHEST
+    slots: ItemSlot = ItemSlot.CHEST
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class LegsArmor(Armor):
-    slot: ItemSlot = ItemSlot.LEGS
+    slots: ItemSlot = ItemSlot.LEGS
 
 
-@dataclass
+@dataclass(**default_dataclass_options)
 class FeetArmor(Armor):
-    slot: ItemSlot = ItemSlot.FEET
+    slots: ItemSlot = ItemSlot.FEET
 
 
 __all__ = ["Armor", "HeadArmor", "ChestArmor", "LegsArmor", "FeetArmor"]
