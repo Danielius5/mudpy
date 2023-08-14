@@ -42,7 +42,6 @@ class ItemSlot(GameFlags):
     JUNK = auto()
 
 
-
 class DamageType(GameFlags):
     NO_DAMAGE_TYPE = auto()
     BALLISTIC = auto()
@@ -56,6 +55,9 @@ class DamageType(GameFlags):
     RADIATION = auto()
     SONIC = auto()
 
+class AmmoType(GameFlags):
+    NO_AMMO_TYPE = auto()
+    BULLET = auto()
 
 class Targets(GameFlags):
     NO_TARGET = auto()
@@ -95,7 +97,7 @@ class ObjectAction(GameFlags):
     TRADE = auto()
 
 
-class CanInspect(GameFlags):
+class InspectionDetails(GameFlags):
     NO_INSPECT = auto()
     SHORT_INSPECT = auto()
     LONG_INSPECT = auto()

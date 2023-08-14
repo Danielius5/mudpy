@@ -4,15 +4,15 @@ import io
 import json
 import uuid
 from abc import ABC
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 
-from objects.flags import CanInspect, DamageType, Effect, ItemSlot, ObjectAction
+from objects.flags import AmmoType, DamageType, Effect, InspectionDetails, ItemSlot, ObjectAction
 
 
 @dataclass
 class GameObject(ABC):
     uuid: str = field(default_factory = lambda: uuid.uuid4().hex, init = False)
-    actions: ObjectAction = ObjectAction.NO_ACTION
+    allowed_actions: ObjectAction = field(default = ObjectAction.NO_ACTION)
 
     def short_description(self):
         return self.__class__.__name__
@@ -26,10 +26,11 @@ class GameObject(ABC):
     def action_description(self):
         with contextlib.redirect_stdout(io.StringIO()) as f:
             print(self.short_description())
-            print(f"Actions: {', '.join([str(action) for action in ObjectAction.get_flags(self.actions)])}")
+            print(f"Actions: {', '.join([str(action) for action in ObjectAction.get_flags(self.allowed_actions)])}")
             return f.getvalue()
 
     def to_dict(self):
+        """Pulls data from the GameObject down its MRO and returns a dictionary of the data"""
         data = {}
         for cls in filter(lambda x: all([
                 issubclass(x, GameObject),
@@ -41,6 +42,10 @@ class GameObject(ABC):
 
     @classmethod
     def from_dict(cls, data):
+        # this is for deserializing, we have to do things ever so slightly differently as 
+        # some fields may not add to the init, thus we have to use setattr post init, it does mean that currently, some
+        # objects will create initially default then be replaced right away, but for the very few fileds this is, I am 
+        # currently fine with it
         init_keys = inspect.signature(cls.__init__).parameters.keys()
         set_attr_keys = set(init_keys) & set(data.keys())
         obj = cls(**{k: v for k, v in data.items() if k in set_attr_keys})
@@ -56,10 +61,10 @@ class GameObject(ABC):
         return json.loads(data, object_hook = cls.from_dict)
 
     def perform_action(self, action: ObjectAction, *args, **kwargs):
-    
+
         fallback_reply = "Nothing to do here"
-        
-        if not self.actions & action:
+
+        if not self.allowed_actions & action:
             return fallback_reply
 
         match action:
@@ -69,18 +74,18 @@ class GameObject(ABC):
                 name = action.name.lower()
                 method = getattr(self, name, lambda *args, **kwargs: fallback_reply)
                 return method(*args, **kwargs)
-            
-    def inspect(self, lod: CanInspect):
+
+    def inspect(self, lod: InspectionDetails):
         match lod:
-            case CanInspect.NO_INSPECT:
+            case InspectionDetails.NO_INSPECT:
                 return "Nothing to see here"
-            case CanInspect.SHORT_INSPECT:
+            case InspectionDetails.SHORT_INSPECT:
                 return self.short_description()
-            case CanInspect.LONG_INSPECT:
+            case InspectionDetails.LONG_INSPECT:
                 return self.long_description()
-            case CanInspect.DETAILED_INSPECT:
+            case InspectionDetails.DETAILED_INSPECT:
                 return self.detailed_description()
-            case CanInspect.ACTION_INSPECT:
+            case InspectionDetails.ACTION_INSPECT:
                 return self.action_description()
 
 
@@ -90,15 +95,15 @@ class Item(GameObject):
     name_prefix: str = ""
     name_suffix: str = ""
 
-    slot: ItemSlot = ItemSlot.NO_SLOT
-    effects: Effect = Effect.NO_EFFECT
-
     stack_size: int = 1
     max_stack_size: int = 1
     weight: float = 0.0
     value: int = 0
 
-    actions: ObjectAction = ObjectAction.STACK | ObjectAction.UNSTACK | ObjectAction.INSPECT
+    slot: ItemSlot = field(default = ItemSlot.NO_SLOT)
+    effects: Effect = field(default = Effect.NO_EFFECT)
+
+    allowed_actions: ObjectAction = ObjectAction.STACK | ObjectAction.UNSTACK | ObjectAction.INSPECT
 
     def short_description(self):
         return self.name_infix
@@ -121,7 +126,7 @@ class Item(GameObject):
     @property
     def stack_weight(self):
         return self.weight * self.stack_size
-    
+
     @property
     def stack_value(self):
         return self.value * self.stack_size
@@ -183,53 +188,10 @@ class Currency(Item):
 
 
 @dataclass
-class Weapon(Item):
-    damage: int = 0
-    damage_type: DamageType = DamageType.NO_DAMAGE_TYPE
-    max_stack_size: int = 1
-    
-
-    def detailed_description(self):
-        with contextlib.redirect_stdout(io.StringIO()) as f:
-            print(super().detailed_description().strip())
-            print(f"Damage: {self.damage}")
-            print(f"Damage Type: {self.damage_type}")
-            return f.getvalue()
-        
-    
-@dataclass
-class Armor(Item):
-    defense: int = 0
-    defense_type: DamageType = DamageType.NO_DAMAGE_TYPE
-    max_stack_size: int = 1
-
-    def detailed_description(self):
-        with contextlib.redirect_stdout(io.StringIO()) as f:
-            print(super().detailed_description().strip())
-            print(f"Defense: {self.defense}")
-            print(f"Defense Type: {self.defense_type}")
-            return f.getvalue()
-        
-        
-@dataclass
-class HeadArmor(Armor):
-    slot: ItemSlot = ItemSlot.HEAD
-    
-@dataclass
-class ChestArmor(Armor):
-    slot: ItemSlot = ItemSlot.CHEST
-    
-@dataclass
-class LegsArmor(Armor):
-    slot: ItemSlot = ItemSlot.LEGS
-    
-@dataclass
-class FeetArmor(Armor):
-    slot: ItemSlot = ItemSlot.FEET
-    
-@dataclass
 class Consumable(Item):
-    ...
+    perishable: bool = False
+    decay_rate: float = 0.0
+    decay_time: float = 0.0
 
 
 @dataclass
@@ -249,7 +211,66 @@ class Drink(Consumable):
 
 @dataclass
 class Ammo(Consumable):
-    pass
+    ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE
+
+
+@dataclass
+class Weapon(Item):
+    damage: int = 0
+    damage_type: DamageType = DamageType.NO_DAMAGE_TYPE
+    max_stack_size: int = 1
+
+    def detailed_description(self):
+        with contextlib.redirect_stdout(io.StringIO()) as f:
+            print(super().detailed_description().strip())
+            print(f"Damage: {self.damage}")
+            print(f"Damage Type: {self.damage_type}")
+            return f.getvalue()
+
+
+@dataclass
+class MeleeWeapon(Weapon):
+    slot: ItemSlot = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND
+
+
+@dataclass
+class RangedWeapon(Weapon):
+    slot: ItemSlot = ItemSlot.RANGED
+    ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE
+
+
+@dataclass
+class Armor(Item):
+    defense: int = 0
+    defense_type: DamageType = DamageType.NO_DAMAGE_TYPE
+    max_stack_size: int = 1
+
+    def detailed_description(self):
+        with contextlib.redirect_stdout(io.StringIO()) as f:
+            print(super().detailed_description().strip())
+            print(f"Defense: {self.defense}")
+            print(f"Defense Type: {self.defense_type}")
+            return f.getvalue()
+
+
+@dataclass
+class HeadArmor(Armor):
+    slot: ItemSlot = ItemSlot.HEAD
+
+
+@dataclass
+class ChestArmor(Armor):
+    slot: ItemSlot = ItemSlot.CHEST
+
+
+@dataclass
+class LegsArmor(Armor):
+    slot: ItemSlot = ItemSlot.LEGS
+
+
+@dataclass
+class FeetArmor(Armor):
+    slot: ItemSlot = ItemSlot.FEET
 
 
 @dataclass
@@ -261,3 +282,7 @@ if __name__ == "__main__":
     currency = Currency()
     currency.stack_size = 1000
     print(currency.perform_action(ObjectAction.DROP))
+    serialized = currency.to_json()
+    print(serialized)
+    deserialized = Currency.from_json(serialized)
+    print(deserialized.perform_action(ObjectAction.TRADE))
