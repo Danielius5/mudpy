@@ -22,7 +22,6 @@ default_dataclass_options = dict(
         kw_only = True,
 )
 
-
 # noinspection PyArgumentList
 @dataclass(**default_dataclass_options)
 class GameObject(ABC):
@@ -128,6 +127,13 @@ class GameObject(ABC):
             _t = self.metadata[key]["convert_flag_type"]
             value = functools.reduce(operator.or_, map(_t, _t.get_flags(value)))
         object.__setattr__(self, key, value)
+
+    def __getstate__(self):
+        return self.to_dict()
+
+    def __setstate__(self, state):
+        for k, v in state.items():
+            setattr(self, k, v)
 
 
 # noinspection PyArgumentList
