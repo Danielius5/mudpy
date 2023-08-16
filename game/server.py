@@ -6,7 +6,7 @@ import websockets.exceptions
 
 from utils import levenshtein_distance
 
-ServerCommand = typing.Callable[["MudServer", str, str], typing.Awaitable[None]]
+ServerCommand = typing.Callable[["MudServer", str, str], typing.Awaitable[str]]
 
 
 # noinspection PyTypeChecker
@@ -18,8 +18,35 @@ class MudServer:
         self.command_mappings = {}
         self.greeting_message = greeting_message or "Welcome to the MUD!"
 
-    async def handle_client(self, websocket, path):
+    async def validate_user(self, username, password):
+        # todo: implement user validation, 
+        #  this should access a DB and compare the username and 
+        #  the hashed password in the DB
+        return username == "test" and password == "test"
+
+    async def handle_client(
+            self,
+            websocket: websockets.WebSocketServerProtocol,
+            path: str,
+    ):
         client_name = await websocket.recv()
+        client_name = client_name.strip()
+        client_password = await websocket.recv()
+        client_password = client_password.strip()
+
+        if any([
+                not client_name,
+                not client_password,
+                not await self.validate_user(client_name, client_password),
+        ]):
+            await websocket.send("Invalid username or password.")
+            await websocket.close()
+            return
+        if client_name in self.connected_clients:
+            await websocket.send("You are already connected.")
+            await websocket.close()
+            return
+
         self.connected_clients[client_name] = websocket
         print(f"{client_name} connected.")
 
@@ -27,38 +54,52 @@ class MudServer:
             await websocket.send(self.greeting_message)
             while True:
                 command = await websocket.recv()
-                await self.process_command(client_name, command)
+                command = command.strip()
+                if not command:
+                    continue
+                reply = await self.process_command(client_name, command)
+                await websocket.send(reply)
+
         except websockets.exceptions.ConnectionClosed:
             del self.connected_clients[client_name]
             print(f"{client_name} disconnected.")
 
-    async def process_command(self, sender, command):
+    async def process_command(
+            self,
+            sender: str,
+            command: str,
+    ):
         parts = command.strip().split(maxsplit = 1)
-
-        async def handle_default(server, sender, args):
-            return server.send_to_client(sender, f"Unknown command: {command}")
 
         if parts:
             command_name = parts[0].lower()
 
-            # use lev distance to find the closest command
             if command_name not in self.command_mappings:
                 closest_command = None
-                closest_distance = 0
+                closest_distance = 0.5
                 for command in self.command_mappings:
-                    distance = levenshtein_distance(command, command_name)
+                    distance = await asyncio.get_event_loop().run_in_executor(None, levenshtein_distance, command,
+                                                                              command_name)
                     if distance > closest_distance:
                         closest_command = command
                         closest_distance = distance
                 if closest_command:
-                    return await self.send_to_client(sender,
-                                                     f"Unknown command: {command}. Did you mean {closest_command}?")
+                    # await self.send_to_client(sender, f"Unknown command: {command_name}. Did you mean {closest_command}?")
+                    reply = f"Unknown command: {command_name}. Did you mean {closest_command}?"
+                else:
+                    reply = f"Unknown command: {command_name}."
+            else:
+                command_args = parts[1] if len(parts) > 1 else ""
+                reply = await self.command_mappings.get(command_name)(self, sender, command_args)
+            return reply
+        else:
+            return "Invalid command."
 
-            command_args = parts[1] if len(parts) > 1 else ""
-            command_handler = self.command_mappings.get(command_name, handle_default)
-            await command_handler(self, sender, command_args)
-
-    async def send_to_client(self, client_name, message):
+    async def send_to_client(
+            self,
+            client_name,
+            message
+    ):
         if client_name in self.connected_clients:
             client = self.connected_clients[client_name]
             await client.send(message)
@@ -100,7 +141,7 @@ if __name__ == "__main__":
             message = f"{sender} inspects {args}."
         else:
             message = f"{sender} inspects nothing."
-        asyncio.create_task(server.send_to_client(sender, message))
+        return message
 
 
     @server.command("say")
@@ -110,7 +151,7 @@ if __name__ == "__main__":
             message = f"{sender} says, \"{args}\""
         else:
             message = f"{sender} says nothing."
-        asyncio.create_task(server.send_to_all_clients(message))
+        return message
 
 
     server.launch()
