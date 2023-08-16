@@ -1,24 +1,42 @@
 import asyncio
 import typing
 
+import sqlalchemy.orm
 import websockets
 import websockets.exceptions
 
 from utils import levenshtein_distance
+
+# todo: move this to a seperate file
+engine = sqlalchemy.create_engine("sqlite:///game.db", echo = True)
+Base = sqlalchemy.orm.declarative_base()
+Session = sqlalchemy.orm.sessionmaker(bind = engine)
+session = Session()
 
 ServerCommand = typing.Callable[["MudServer", str, str], typing.Awaitable[str]]
 
 
 # noinspection PyTypeChecker
 class MudServer:
-    def __init__(self, host, port, greeting_message = None):
+    def __init__(
+            self,
+            host: str,
+            port: int,
+            db_session: sqlalchemy.orm.Session,
+            greeting_message = None
+    ):
         self.host = host
         self.port = port
+        self.db_session = db_session
         self.connected_clients = {}
         self.command_mappings = {}
         self.greeting_message = greeting_message or "Welcome to the MUD!"
 
-    async def validate_user(self, username, password):
+    async def validate_user(
+            self,
+            username: str,
+            password: str,
+    ) -> bool:
         # todo: implement user validation, 
         #  this should access a DB and compare the username and 
         #  the hashed password in the DB
@@ -29,10 +47,14 @@ class MudServer:
             websocket: websockets.WebSocketServerProtocol,
             path: str,
     ):
-        client_name = await websocket.recv()
-        client_name = client_name.strip()
-        client_password = await websocket.recv()
-        client_password = client_password.strip()
+
+        try:
+            client_name = await websocket.recv()
+            client_name = client_name.strip()
+            client_password = await websocket.recv()
+            client_password = client_password.strip()
+        except websockets.exceptions.ConnectionClosed:
+            return
 
         if any([
                 not client_name,
@@ -42,6 +64,7 @@ class MudServer:
             await websocket.send("Invalid username or password.")
             await websocket.close()
             return
+
         if client_name in self.connected_clients:
             await websocket.send("You are already connected.")
             await websocket.close()
@@ -97,14 +120,17 @@ class MudServer:
 
     async def send_to_client(
             self,
-            client_name,
-            message
+            client_name: str,
+            message: str,
     ):
         if client_name in self.connected_clients:
             client = self.connected_clients[client_name]
             await client.send(message)
 
-    async def send_to_all_clients(self, message):
+    async def send_to_all_clients(
+            self,
+            message: str,
+    ):
         for client in self.connected_clients.values():
             await client.send(message)
 
@@ -129,9 +155,13 @@ class MudServer:
 
         return decorator
 
+    # todo: utility decorators, for things such as 
+    #  limiting a command to an operator or admin, 
+    #  or to a specific room, etc
+
 
 if __name__ == "__main__":
-    server = MudServer("localhost", 8765)
+    server = MudServer("localhost", 8765, session, "Welcome to the MUD!")
 
 
     @server.command("inspect")
@@ -154,4 +184,18 @@ if __name__ == "__main__":
         return message
 
 
+    @server.command("whisper")
+    async def whisper(server: MudServer, sender: str, args: str):
+        target, message = args.split(maxsplit = 1)
+        target = target.strip()
+        message = message.strip()
+        if target in server.connected_clients:
+            target_client = server.connected_clients[target]
+            await target_client.send(f"{sender} whispers, \"{message}\"")
+            return f"You whisper to {target}, \"{message}\""
+        else:
+            return f"{target} is not connected."
+        
+
+    Base.metadata.create_all(engine)
     server.launch()
