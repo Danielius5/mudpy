@@ -9,7 +9,8 @@ import uuid
 from abc import ABC
 from dataclasses import dataclass, field, fields
 
-from objects.flags import Effect, InspectionDetails, ItemSlot, ObjectAction, WorldSpaceFlavor, WorldSpaceType
+from objects.game_object.flags import Effect, InspectionDetails, ItemSlot, ObjectAction, WorldSpaceFlavor, \
+    WorldSpaceType
 
 default_dataclass_options = dict(
         slots = True,
@@ -21,6 +22,12 @@ default_dataclass_options = dict(
         init = True,
         kw_only = True,
 )
+
+
+# metadata explained:
+# private: is not shared over the API
+# convert_flag_type: is a flag type, and should be converted to the flag type when deserializing
+
 
 # noinspection PyArgumentList
 @dataclass(**default_dataclass_options)
@@ -299,6 +306,7 @@ class WorldObject(GameObject):
 # noinspection PyArgumentList
 @dataclass(**default_dataclass_options)
 class WorldSpace(GameObject):
+    world_space_name: str = field(default = "")
     creatures: list[Living] = field(default_factory = list)
     items: list[Item] = field(default_factory = list)
     world_objects: list[WorldObject] = field(default_factory = list)

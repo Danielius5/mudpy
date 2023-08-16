@@ -2,8 +2,8 @@ import contextlib
 import io
 from dataclasses import dataclass
 
-from objects.flags import DamageType, ItemSlot
 from objects.game_object.base import default_dataclass_options, Item
+from objects.game_object.flags import DamageType, ItemSlot
 
 
 @dataclass(**default_dataclass_options)

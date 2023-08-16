@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from objects.flags import AmmoType
 from objects.game_object import Item
 from objects.game_object.base import default_dataclass_options
+from objects.game_object.flags import AmmoType
 
 
 @dataclass(**default_dataclass_options)
