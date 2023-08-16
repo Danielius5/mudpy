@@ -18,15 +18,16 @@ class MudServer:
         try:
             while True:
                 command = await websocket.recv()
-                await self.process_command(client_name, command)
+                # if the command is not empty
+                if command:
+                    await self.process_command(client_name, command)
         except websockets.exceptions.ConnectionClosed:
             del self.connected_clients[client_name]
             print(f"{client_name} disconnected.")
 
     async def process_command(self, sender, command):
         message = f"{sender}: {command}"
-        for client in self.connected_clients.values():
-            await client.send(message)
+        await self.connected_clients[sender].send(message)
 
     async def start(self):
         start_server = websockets.serve(self.handle_client, self.host, self.port)
