@@ -9,7 +9,7 @@ import uuid
 from abc import ABC
 from dataclasses import dataclass, field, fields
 
-from objects.game_object.flags import Effect, InspectionDetails, ItemSlot, ObjectAction, WorldSpaceFlavor, \
+from objects.flags import Effect, InspectionDetails, ItemSlot, ObjectAction, WorldSpaceFlavor, \
     WorldSpaceType
 
 default_dataclass_options = dict(

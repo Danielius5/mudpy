@@ -4,16 +4,19 @@ import typing
 import websockets
 import websockets.exceptions
 
+from utils import levenshtein_distance
+
 ServerCommand = typing.Callable[["MudServer", str, str], typing.Awaitable[None]]
 
 
 # noinspection PyTypeChecker
 class MudServer:
-    def __init__(self, host, port):
+    def __init__(self, host, port, greeting_message = None):
         self.host = host
         self.port = port
         self.connected_clients = {}
         self.command_mappings = {}
+        self.greeting_message = greeting_message or "Welcome to the MUD!"
 
     async def handle_client(self, websocket, path):
         client_name = await websocket.recv()
@@ -21,6 +24,7 @@ class MudServer:
         print(f"{client_name} connected.")
 
         try:
+            await websocket.send(self.greeting_message)
             while True:
                 command = await websocket.recv()
                 await self.process_command(client_name, command)
@@ -35,8 +39,21 @@ class MudServer:
             return server.send_to_client(sender, f"Unknown command: {command}")
 
         if parts:
-            # await self.command_mappings.get(parts[0].lower(), handle_default)(self, sender, parts[1] if len(parts) > 1 else "")
             command_name = parts[0].lower()
+
+            # use lev distance to find the closest command
+            if command_name not in self.command_mappings:
+                closest_command = None
+                closest_distance = 0
+                for command in self.command_mappings:
+                    distance = levenshtein_distance(command, command_name)
+                    if distance > closest_distance:
+                        closest_command = command
+                        closest_distance = distance
+                if closest_command:
+                    return await self.send_to_client(sender,
+                                                     f"Unknown command: {command}. Did you mean {closest_command}?")
+
             command_args = parts[1] if len(parts) > 1 else ""
             command_handler = self.command_mappings.get(command_name, handle_default)
             await command_handler(self, sender, command_args)
@@ -70,10 +87,6 @@ class MudServer:
             return callback
 
         return decorator
-
-
-# a server command typehint
-# takes a server, sender, and args
 
 
 if __name__ == "__main__":
