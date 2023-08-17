@@ -1,6 +1,5 @@
-from dataclasses import dataclass
-
-from .base import default_dataclass_options, Living
+from .base import go_dataclass
+from .simple import Living
 
 
 # todo: Flesh out the living classes
@@ -28,49 +27,49 @@ from .base import default_dataclass_options, Living
 #  - Add a way to track the living's quest rewards
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class Human(Living):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class Animal(Living):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class NPC(Living):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class Trader(NPC):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class QuestGiver(NPC):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class QuestNPC(NPC):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class HostileNPC(NPC):
     pass
 
 
 # noinspection PyArgumentList
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class Player(Living):
     pass
 
