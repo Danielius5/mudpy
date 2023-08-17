@@ -86,20 +86,7 @@ class WeaponModSlot(GameFlags):
 
 class ObjectAction(GameFlags):
     NO_ACTION = auto()
-    PICK_UP = auto()
-    DROP = auto()
-    USE = auto()
-    EQUIP = auto()
-    UNEQUIP = auto()
-    STACK = auto()
-    UNSTACK = auto()
     INSPECT = auto()
-    ATTACK = auto()
-    DEFEND = auto()
-    MOVE = auto()
-    SELL = auto()
-    BUY = auto()
-    TRADE = auto()
 
 
 class InspectionDetails(GameFlags):

@@ -1,12 +1,12 @@
 import contextlib
 import io
-from dataclasses import dataclass
 
-from objects.flags import AmmoType, DamageType, ItemSlot
-from objects.game_object.base import default_dataclass_options, Item
+from game.mechanics.flags import AmmoType, DamageType, ItemSlot
+from .base import go_dataclass
+from .simple import Item
 
 
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class Weapon(Item):
     damage: int = 0
     damage_type: DamageType = DamageType.NO_DAMAGE_TYPE
@@ -20,12 +20,12 @@ class Weapon(Item):
             return f.getvalue()
 
 
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class MeleeWeapon(Weapon):
     slot: ItemSlot = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND
 
 
-@dataclass(**default_dataclass_options)
+@go_dataclass
 class RangedWeapon(Weapon):
     slot: ItemSlot = ItemSlot.RANGED
     ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE

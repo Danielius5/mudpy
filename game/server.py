@@ -1,17 +1,10 @@
 import asyncio
 import typing
 
-import sqlalchemy.orm
 import websockets
 import websockets.exceptions
 
-from utils import levenshtein_distance
-
-# todo: move this to a seperate file
-engine = sqlalchemy.create_engine("sqlite:///game.db", echo = True)
-Base = sqlalchemy.orm.declarative_base()
-Session = sqlalchemy.orm.sessionmaker(bind = engine)
-session = Session()
+from game.system.utils import levenshtein_distance
 
 ServerCommand = typing.Callable[["MudServer", str, str], typing.Awaitable[str]]
 
@@ -22,12 +15,10 @@ class MudServer:
             self,
             host: str,
             port: int,
-            db_session: sqlalchemy.orm.Session,
             greeting_message = None
     ):
         self.host = host
         self.port = port
-        self.db_session = db_session
         self.connected_clients = {}
         self.command_mappings = {}
         self.greeting_message = greeting_message or "Welcome to the MUD!"
@@ -93,30 +84,27 @@ class MudServer:
             command: str,
     ):
         parts = command.strip().split(maxsplit = 1)
-
-        if parts:
-            command_name = parts[0].lower()
-
-            if command_name not in self.command_mappings:
-                closest_command = None
-                closest_distance = 0.5
-                for command in self.command_mappings:
-                    distance = await asyncio.get_event_loop().run_in_executor(None, levenshtein_distance, command,
-                                                                              command_name)
-                    if distance > closest_distance:
-                        closest_command = command
-                        closest_distance = distance
-                if closest_command:
-                    # await self.send_to_client(sender, f"Unknown command: {command_name}. Did you mean {closest_command}?")
-                    reply = f"Unknown command: {command_name}. Did you mean {closest_command}?"
-                else:
-                    reply = f"Unknown command: {command_name}."
-            else:
-                command_args = parts[1] if len(parts) > 1 else ""
-                reply = await self.command_mappings.get(command_name)(self, sender, command_args)
-            return reply
+        if (command_name := parts[0].lower()) not in self.command_mappings:
+            reply = await self.find_most_similar_command(command_name)
         else:
-            return "Invalid command."
+            reply = await self.command_mappings.get(command_name)(self, sender, parts[1] if len(parts) > 1 else "")
+        return reply
+
+    async def find_most_similar_command(self, command_name):
+        closest_command = None
+        closest_distance = 0.5
+        for command in self.command_mappings:
+            distance = await asyncio.get_event_loop().run_in_executor(None, levenshtein_distance, command,
+                                                                      command_name)
+            if distance > closest_distance:
+                closest_command = command
+                closest_distance = distance
+        if closest_command:
+            # await self.send_to_client(sender, f"Unknown command: {command_name}. Did you mean {closest_command}?")
+            reply = f"Unknown command: {command_name}. Did you mean {closest_command}?"
+        else:
+            reply = f"Unknown command: {command_name}."
+        return reply
 
     async def send_to_client(
             self,
@@ -161,7 +149,7 @@ class MudServer:
 
 
 if __name__ == "__main__":
-    server = MudServer("localhost", 8765, session, "Welcome to the MUD!")
+    server = MudServer("localhost", 8765, "Welcome to the MUD!")
 
 
     @server.command("inspect")
@@ -197,5 +185,4 @@ if __name__ == "__main__":
             return f"{target} is not connected."
         
 
-    Base.metadata.create_all(engine)
     server.launch()
