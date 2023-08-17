@@ -30,7 +30,7 @@ class ItemSlot(GameFlags):
     CHEST = auto()
     BACK = auto()
     WRISTS = auto()
-    HANDS = auto()
+    GLOVES = auto()
     FINGERS = auto()
     WAIST = auto()
     LEGS = auto()
@@ -38,6 +38,7 @@ class ItemSlot(GameFlags):
     MAIN_HAND = auto()
     OFF_HAND = auto()
     TWO_HAND = auto()
+    HANDS = MAIN_HAND | OFF_HAND | TWO_HAND
     RANGED = auto()
     AMMO = auto()
     TOOL = auto()

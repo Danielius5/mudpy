@@ -1,5 +1,5 @@
-from .base import go_dataclass
 from .simple import Living
+from ..system.utils import go_dataclass
 
 
 # todo: Flesh out the living classes

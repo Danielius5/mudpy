@@ -3,9 +3,9 @@ import io
 from dataclasses import field
 
 from game.mechanics.flags import WorldSpaceFlavor, WorldSpaceType
-from game.objects.base import go_dataclass
 from .base import GameObject
 from ..mechanics.flags import *
+from ..system.utils import go_dataclass
 
 
 @go_dataclass

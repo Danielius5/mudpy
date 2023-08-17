@@ -1,15 +1,16 @@
 import contextlib
 import io
+from dataclasses import field
 
-from game.mechanics.flags import AmmoType, DamageType, ItemSlot
-from .base import go_dataclass
 from .simple import Item
+from ..mechanics.flags import AmmoType, DamageType, ItemSlot
+from ..system.utils import go_dataclass
 
 
 @go_dataclass
 class Weapon(Item):
     damage: int = 0
-    damage_type: DamageType = DamageType.NO_DAMAGE_TYPE
+    damage_type: DamageType = field(default = DamageType.NO_DAMAGE_TYPE, metadata = {"to_type": DamageType})
     max_stack_size: int = 1
 
     def detailed_description(self):
@@ -22,13 +23,13 @@ class Weapon(Item):
 
 @go_dataclass
 class MeleeWeapon(Weapon):
-    slot: ItemSlot = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND
+    slot: ItemSlot = field(default = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND, metadata = {"to_type": ItemSlot})
 
 
 @go_dataclass
 class RangedWeapon(Weapon):
-    slot: ItemSlot = ItemSlot.RANGED
-    ammo_type: AmmoType = AmmoType.NO_AMMO_TYPE
+    slot: ItemSlot = field(default = ItemSlot.MAIN_HAND | ItemSlot.OFF_HAND, metadata = {"to_type": ItemSlot})
+    ammo_type: AmmoType = field(default = AmmoType.NO_AMMO_TYPE, metadata = {"to_type": AmmoType})
 
 
 __all__ = ["Weapon", "MeleeWeapon", "RangedWeapon"]

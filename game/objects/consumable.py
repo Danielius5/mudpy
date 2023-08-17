@@ -1,6 +1,6 @@
 from game.mechanics.flags import AmmoType
-from .base import go_dataclass
 from .simple import Item
+from ..system.utils import go_dataclass
 
 
 @go_dataclass

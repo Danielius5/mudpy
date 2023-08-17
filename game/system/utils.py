@@ -1,4 +1,8 @@
 # levenshtein distance, based on percentage similarity
+import functools
+from dataclasses import dataclass
+
+
 def levenshtein_distance(s1, s2):
     if len(s1) < len(s2):
         return levenshtein_distance(s2, s1)
@@ -14,3 +18,26 @@ def levenshtein_distance(s1, s2):
             current_row.append(min(insertions, deletions, substitutions))
         previous_row = current_row
     return 1 - (previous_row[-1] / max(len(s1), len(s2)))
+
+
+@functools.cache
+def search_subs(cls, name):
+    if cls.__name__.lower() == name.lower():
+        return cls
+    for sub in cls.__subclasses__():
+        if (result := search_subs(sub, name)):
+            return result
+    raise ValueError(f"Invalid type or name {name}")
+
+
+def go_dataclass(*args, **kwargs):
+    defaults = {
+            "init"       : True,
+            "repr"       : True,
+            "eq"         : True,
+            "order"      : False,
+            "unsafe_hash": False,
+            "frozen"     : False,
+            "kw_only"    : True,
+    }
+    return dataclass(*args, **{**defaults, **kwargs})
