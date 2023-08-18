@@ -1,55 +1,26 @@
-from game.objects import MeleeWeapon
+from pprint import pprint
 
-WeaponFactory = MeleeWeapon.factory()
-SwordFactory = WeaponFactory.bind(
-        name_infix = "Sword",
-        damage = 10,
-        damage_type = "SLASHING",
-        max_stack_size = 1
-)
+from game.objects.base import BaseObject, ObjectFactory
+from game.objects.mixins import DBSerializable, GarbageCollected, Inspectable
+from game.system.utils import go_dataclass as ddc, hidden_field as hf, private_hidden_field as phf
 
-LegendarySwordFactory = SwordFactory.bind(
-        name_prefix = "Legendary",
-        damage = 100
-)
 
-GodSwordFactory = LegendarySwordFactory.bind(
-        name_prefix = "Godly",
-        damage = 1000
-)
+@ddc
+class Room(BaseObject, GarbageCollected, Inspectable, DBSerializable):
+    db_category: str = phf(default = "rooms")
+    name: str = hf(default = "A room")
 
-sword = SwordFactory.create()
-legendary_sword = LegendarySwordFactory.create()
-god_sword = GodSwordFactory.create()
-print(sword.to_json(
-        "name_prefix",
-        "name_infix",
-        "name_suffix",
-        "damage",
-        "damage_type",
-        "max_stack_size"
-))
-print(legendary_sword.to_json(
-        "name_prefix",
-        "name_infix",
-        "name_suffix",
-        "damage",
-        "damage_type",
-        "max_stack_size"
-))
-print(god_sword.to_json(
-        "name_prefix",
-        "name_infix",
-        "name_suffix",
-        "damage",
-        "damage_type",
-        "max_stack_size"
-))
 
-print(sword)
-print(legendary_sword)
-print(god_sword)
+RoomFactory: ObjectFactory[Room] = Room.factory()
+LargeRoomFactory: ObjectFactory[Room] = RoomFactory.bind(name = "a large room")
+SmallRoomFactory: ObjectFactory[Room] = RoomFactory.bind(name = "a small room")
 
-print(sword.detailed_description())
-print(legendary_sword.detailed_description())
-print(god_sword.detailed_description())
+room = RoomFactory.create()
+large_room = LargeRoomFactory.create()
+small_room = SmallRoomFactory.create()
+
+room_dict = room.to_dict(show_private = True)
+room_dict_public = room.to_dict()
+
+pprint(room_dict)
+pprint(room_dict_public)

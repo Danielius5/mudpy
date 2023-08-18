@@ -1,6 +1,6 @@
 # levenshtein distance, based on percentage similarity
 import functools
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 def levenshtein_distance(s1, s2):
@@ -22,22 +22,50 @@ def levenshtein_distance(s1, s2):
 
 @functools.cache
 def search_subs(cls, name):
-    if cls.__name__.lower() == name.lower():
-        return cls
-    for sub in cls.__subclasses__():
-        if (result := search_subs(sub, name)):
-            return result
-    raise ValueError(f"Invalid type or name {name}")
+    def _search_subs(cls, name):
+        if cls.__name__.lower() == name.lower():
+            return cls
+        for sub in cls.__subclasses__():
+            if (result := _search_subs(sub, name)):
+                return result
+        return None
+
+    sub = _search_subs(cls, name)
+    if sub is None:
+        raise ValueError(f"Invalid type or name {name}")
+    return sub
 
 
 def go_dataclass(*args, **kwargs):
     defaults = {
-            "init"       : True,
-            "repr"       : True,
-            "eq"         : True,
-            "order"      : False,
-            "unsafe_hash": False,
-            "frozen"     : False,
-            "kw_only"    : True,
+            "init"   : True,
+            "repr"   : True,
+            "eq"     : True,
+            "kw_only": True,
     }
     return dataclass(*args, **{**defaults, **kwargs})
+
+
+def hidden_field(*args, **kwargs):
+    defaults = {
+            "repr": False,
+            "init": False,
+    }
+    defaults.update(kwargs)
+    return field(*args, **defaults)
+
+
+def private_field(*args, **kwargs):
+    if m := kwargs.get("metadata"):
+        m["private"] = True
+    else:
+        kwargs["metadata"] = {"private": True}
+    return field(*args, **kwargs)
+
+
+def private_hidden_field(*args, **kwargs):
+    if m := kwargs.get("metadata"):
+        m["private"] = True
+    else:
+        kwargs["metadata"] = {"private": True}
+    return field(*args, **{**kwargs, "repr": False, "init": False})
