@@ -47,6 +47,12 @@ class BaseObject:
                 if field.metadata
         }
 
+    @classmethod
+    @property
+    @functools.cache
+    def field_names(cls):
+        return set([field.name for field in fields(cls)])
+
     def __getattr__(self, name):
         if name.startswith("set_"):
             return functools.partial(self.__set_field, name[4:])
@@ -139,8 +145,10 @@ class BaseObject:
         for field in fields(self):
             if keys and field.name not in keys:
                 continue
-            if not cls_meta.get(field.name, {}).get("private", False) or show_private:
-                v = getattr(self, field.name)
+            v = getattr(self, field.name)
+            if field.metadata.get("no_serialize", False) or callable(v):
+                continue
+            if not field.metadata.get("private", False) or show_private:
                 if isinstance(v, BaseObject):
                     v = v.to_dict()
                 elif isinstance(v, type) and issubclass(type(v), BaseObject):
