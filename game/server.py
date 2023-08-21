@@ -6,7 +6,14 @@ import websockets.exceptions
 
 from game.system.utils import levenshtein_distance
 
-ServerCommand = typing.Callable[["MudServer", str, str], typing.Awaitable[str]]
+ClientName = str
+ClientMessage = str
+ServerResponse = str
+
+CommandArgs = typing.Tuple[str, ...]
+ServerCommand = typing.Callable[["MudServer", ClientName, ClientMessage, CommandArgs], ServerResponse]
+Clients = typing.Dict[ClientName, websockets.WebSocketServerProtocol]
+Commands = typing.Dict[str, ServerCommand]
 
 
 # noinspection PyTypeChecker
@@ -15,174 +22,53 @@ class MudServer:
             self,
             host: str,
             port: int,
-            greeting_message = None
     ):
         self.host = host
         self.port = port
-        self.connected_clients = {}
-        self.command_mappings = {}
-        self.greeting_message = greeting_message or "Welcome to the MUD!"
+        self.clients: Clients = {}
+        self.commands: Commands = {}
+        self.loop = asyncio.get_event_loop()
 
-    async def validate_user(
-            self,
-            username: str,
-            password: str,
-    ) -> bool:
-        # todo: implement user validation, 
-        #  this should access a DB and compare the username and 
-        #  the hashed password in the DB
-        return username == "test" and password == "test"
+    async def start(self):
+        async with websockets.serve(self.handle_client, self.host, self.port):
+            self.loop.run_forever()
 
-    async def handle_client(
-            self,
-            websocket: websockets.WebSocketServerProtocol,
-            path: str,
-    ):
-
+    async def handle_client(self, client: websockets.WebSocketServerProtocol, path: str):
+        client_name = await client.recv()
+        self.clients[client_name] = client
         try:
-            client_name = await websocket.recv()
-            client_name = client_name.strip()
-            client_password = await websocket.recv()
-            client_password = client_password.strip()
-        except websockets.exceptions.ConnectionClosed:
-            return
-
-        if any([
-                not client_name,
-                not client_password,
-                not await self.validate_user(client_name, client_password),
-        ]):
-            await websocket.send("Invalid username or password.")
-            await websocket.close()
-            return
-
-        if client_name in self.connected_clients:
-            await websocket.send("You are already connected.")
-            await websocket.close()
-            return
-
-        self.connected_clients[client_name] = websocket
-        print(f"{client_name} connected.")
-
-        try:
-            await websocket.send(self.greeting_message)
             while True:
-                command = await websocket.recv()
-                command = command.strip()
-                if not command:
-                    continue
-                reply = await self.process_command(client_name, command)
-                await websocket.send(reply)
-
+                message = await client.recv()
+                await client.send(await self.handle_message(client_name, message))
         except websockets.exceptions.ConnectionClosed:
-            del self.connected_clients[client_name]
-            print(f"{client_name} disconnected.")
+            del self.clients[client_name]
 
-    async def process_command(
-            self,
-            sender: str,
-            command: str,
-    ):
-        parts = command.strip().split(maxsplit = 1)
-        if (command_name := parts[0].lower()) not in self.command_mappings:
-            reply = await self.find_most_similar_command(command_name)
+    async def handle_message(self, client_name: ClientName, message: ClientMessage) -> ServerResponse:
+        command, *args = message.split(" ")
+        if command in self.commands:
+            return await self.commands[command](self, client_name, message, args)
         else:
-            reply = await self.command_mappings.get(command_name)(self, sender, parts[1] if len(parts) > 1 else "")
-        return reply
+            return f"Command not found. Did you mean: {', '.join(self.get_closest_commands(command))}"
 
-    async def find_most_similar_command(self, command_name):
-        closest_command = None
-        closest_distance = 0.5
-        for command in self.command_mappings:
-            distance = await asyncio.get_event_loop().run_in_executor(None, levenshtein_distance, command,
-                                                                      command_name)
-            if distance > closest_distance:
-                closest_command = command
-                closest_distance = distance
-        if closest_command:
-            # await self.send_to_client(sender, f"Unknown command: {command_name}. Did you mean {closest_command}?")
-            reply = f"Unknown command: {command_name}. Did you mean {closest_command}?"
-        else:
-            reply = f"Unknown command: {command_name}."
-        return reply
+    def get_closest_commands(self, command: str) -> typing.List[str]:
+        return sorted(self.commands.keys(), key = lambda c: levenshtein_distance(command, c))[:5]
 
-    async def send_to_client(
-            self,
-            client_name: str,
-            message: str,
-    ):
-        if client_name in self.connected_clients:
-            client = self.connected_clients[client_name]
-            await client.send(message)
+    def command(self, name: str):
+        def wrapper(func: ServerCommand):
+            self.commands[name] = func
+            return func
 
-    async def send_to_all_clients(
-            self,
-            message: str,
-    ):
-        for client in self.connected_clients.values():
-            await client.send(message)
+        return wrapper
 
-    async def start_websocket(self):
-        start_server = websockets.serve(self.handle_client, self.host, self.port)
-        print("MUD server started.")
-        await start_server
+    def send_message(self, client_name: ClientName, message: ServerResponse):
+        self.loop.create_task(self.clients[client_name].send(message))
 
-        await asyncio.Event().wait()
+    def broadcast_message(self, message: ServerResponse):
+        for client in self.clients.values():
+            self.loop.create_task(client.send(message))
 
-    def launch(self):
-        asyncio.run(server.start_websocket())
+    def get_client_names(self) -> typing.List[ClientName]:
+        return list(self.clients.keys())
 
-    def register_new_command(self, command, callback: ServerCommand):
-        self.command_mappings[command] = callback
-        return self
-
-    def command(self, command) -> typing.Callable[[ServerCommand], ServerCommand]:
-        def decorator(callback: ServerCommand) -> ServerCommand:
-            self.register_new_command(command, callback)
-            return callback
-
-        return decorator
-
-    # todo: utility decorators, for things such as 
-    #  limiting a command to an operator or admin, 
-    #  or to a specific room, etc
-
-
-if __name__ == "__main__":
-    server = MudServer("localhost", 8765, "Welcome to the MUD!")
-
-
-    @server.command("inspect")
-    async def inspect(server: MudServer, sender: str, args: str):
-        args = args.strip()
-        if args:
-            message = f"{sender} inspects {args}."
-        else:
-            message = f"{sender} inspects nothing."
-        return message
-
-
-    @server.command("say")
-    async def say(server: MudServer, sender: str, args: str):
-        args = args.strip()
-        if args:
-            message = f"{sender} says, \"{args}\""
-        else:
-            message = f"{sender} says nothing."
-        return message
-
-
-    @server.command("whisper")
-    async def whisper(server: MudServer, sender: str, args: str):
-        target, message = args.split(maxsplit = 1)
-        target = target.strip()
-        message = message.strip()
-        if target in server.connected_clients:
-            target_client = server.connected_clients[target]
-            await target_client.send(f"{sender} whispers, \"{message}\"")
-            return f"You whisper to {target}, \"{message}\""
-        else:
-            return f"{target} is not connected."
-        
-
-    server.launch()
+    def get_client(self, client_name: ClientName) -> websockets.WebSocketServerProtocol:
+        return self.clients[client_name]
