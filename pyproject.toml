@@ -1,0 +1,16 @@
+[tool.poetry]
+name = "mudpy"
+version = "0.1.0"
+description = "A Python based MUD with a cyberpunk theme"
+authors = ["AlyceOsbourne"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+websockets = "^11.0.3"
+pymongo = "^4.4.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
